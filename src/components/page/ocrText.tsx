@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -22,12 +21,11 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { toast } from "sonner";
 import Image from "next/image";
 import { useOCR } from "@/hooks/use-ocr";
 
 export default function OCRPage() {
-  const { file, state, action, method } = useOCR();
+  const { state, action, method } = useOCR();
 
   return (
     <div className="min-h-screen">
@@ -35,8 +33,7 @@ export default function OCRPage() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold">OCR Text Extractor</h1>
           <p>
-            Image-to-text conversion powered by OCR, with smart customization
-            using Gemini AI
+            Image-to-text conversion powered by OCR (Tesseract) 
           </p>
         </div>
 
@@ -54,7 +51,7 @@ export default function OCRPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!file ? (
+              {!state?.selectedFile ? (
                 <div
                   onDrop={method?.handleDrop}
                   onDragOver={method?.handleDragOver}
@@ -74,10 +71,9 @@ export default function OCRPage() {
                       const file = e.target.files?.[0];
                       const handler = method?.handleFileSelect;
 
-                      if (file &&typeof handler === "function") {
+                      if (file && typeof handler === "function") {
                         handler(file);
                       }
-
                     }}
                     className="hidden"
                   />
@@ -87,13 +83,18 @@ export default function OCRPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FileImage className="w-5 h-5 text-green-600" />
-                      <span className="font-medium">{file.name}</span>
+                      <span className="font-medium">
+                        {state?.selectedFile.name}
+                      </span>
                       <Badge variant="secondary">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                       {state?.selectedFile?.size != null
+  ? (state.selectedFile.size / 1024 / 1024).toFixed(2) + " MB"
+  : "N/A"}
+
                       </Badge>
                     </div>
                     <div className="flex gap-2">
-                      <Button
+                      <Button 
                         variant="outline"
                         size="sm"
                         onClick={() =>
@@ -120,7 +121,7 @@ export default function OCRPage() {
                     <div className="border rounded-lg overflow-hidden">
                       <Image
                         src={state.imagePreview}
-                        alt={file.name}
+                        alt={state?.selectedFile.name}
                         className="w-full h-48 object-contain bg-gray-50"
                         width={500}
                         height={500}
@@ -157,11 +158,13 @@ export default function OCRPage() {
               <CardTitle>Extracted Text</CardTitle>
               <CardDescription>
                 {state?.ocrResult
-                  ? `Confidence: ${state.ocrResult.confidence.toFixed(
-                      1
-                    )}% • Processing time: ${(
-                      state.ocrResult.processingTime / 1000
-                    ).toFixed(1)}s`
+                  ? `Confidence: ${
+                      state.ocrResult.confidence?.toFixed(1) ?? "N/A"
+                    }% • Processing time: ${
+                      state.ocrResult.processingTime !== undefined
+                        ? (state.ocrResult.processingTime / 1000).toFixed(1)
+                        : "N/A"
+                    }s`
                   : "Text will appear here after processing"}
               </CardDescription>
             </CardHeader>

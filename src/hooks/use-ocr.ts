@@ -1,49 +1,42 @@
-import { FileValidForm, FileValidFormType } from "@/form/file-valid-form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OCRHookExport, OCRResult } from "@/type/ocr";
+import { useGetTextFromImageMutation } from "@/libs/redux/rtk/ocr";
 
 export function useOCR(): OCRHookExport {
-  const form = useForm<FileValidFormType>({
-    resolver: zodResolver(FileValidForm),
-    mode: "onChange",
-  });
-  const file = form.watch("file");
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [showPreview, setShowPreview] = useState(true);
 
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      if (!file.type.startsWith("image/")) {
-        toast.warning("Invalid file type. Please select an image file.");
-        return;
-      }
+  const [getTextFromImage] = useGetTextFromImageMutation();
 
-      if (file.size > 10 * 1024 * 1024) {
-        toast.warning("File size is too large. Please select a smaller file.");
-        return;
-      }
-      form.setValue("file", file, { shouldValidate: true });
-      setOcrResult(null);
+  const handleFileSelect = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Invalid file type. Please select an image file.");
+      return;
+    }
 
-      try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      } catch (error) {
-        toast.error("Error reading file.");
-      }
-    },
-    [form]
-  );
+    if (file.size > 10 * 1024 * 1024) {
+      toast.warning("File size is too large. Please select a smaller file.");
+      return;
+    }
+
+    setSelectedFile(file);
+    setOcrResult(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error("Error reading file.");
+    }
+  }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -60,8 +53,10 @@ export function useOCR(): OCRHookExport {
     e.preventDefault();
   }, []);
 
+ 
+
   const processOCR = useCallback(async () => {
-    if (!file) return;
+    if (!selectedFile) return;
 
     setIsProcessing(true);
     setProgress(0);
@@ -77,24 +72,20 @@ export function useOCR(): OCRHookExport {
           return prev + Math.random() * 15;
         });
       }, 200);
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
+      const response = await getTextFromImage({ file: selectedFile }).unwrap();
+      //   await new Promise((resolve) => setTimeout(resolve, 3000));
+     
+      console.log(response);
+      
       clearInterval(progressInterval);
       setProgress(100);
-
-      const mockText = ` 
-        This mock shows how the extracted text would appear here.
-        Multiple lines and paragraphs are preserved.
-        Special characters and numbers: 123, @#$%
-        `;
 
       const processingTime = Date.now() - startTime;
 
       setOcrResult({
-        text: mockText,
+        text: response.text,
         processingTime,
-        confidence: 85 + Math.random() * 10,
+        confidence: response.confidence,
       });
       toast.success("Text extracted successfully.");
     } catch (error) {
@@ -106,7 +97,7 @@ export function useOCR(): OCRHookExport {
       setIsProcessing(false);
       setProgress(0);
     }
-  }, [file]);
+  }, [selectedFile, getTextFromImage]);
 
   const copyToClipboard = async () => {
     if (!ocrResult?.text) return;
@@ -133,7 +124,7 @@ export function useOCR(): OCRHookExport {
     URL.revokeObjectURL(url);
   };
   const clearAll = () => {
-    form.reset();
+    setSelectedFile(null);
     setImagePreview(null);
     setOcrResult(null);
     setProgress(0);
@@ -148,8 +139,8 @@ export function useOCR(): OCRHookExport {
     };
   }, [ocrResult]);
   return {
-    file,
     state: {
+      selectedFile,
       imagePreview,
       isProcessing,
       progress,
@@ -157,6 +148,7 @@ export function useOCR(): OCRHookExport {
       showPreview,
     },
     action: {
+      setSelectedFile,
       setImagePreview,
       setIsProcessing,
       setProgress,

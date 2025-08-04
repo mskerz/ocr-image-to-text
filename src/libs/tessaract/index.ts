@@ -1,4 +1,4 @@
-import Tesseract from "tesseract.js";
+import { createWorker, recognize } from "tesseract.js";
 
 export enum Methods {
   FROM_FILE = "FILE",
@@ -22,12 +22,13 @@ class TesseractService {
     }
   }
 
-  private async recognize(image: string | File | Blob) {
+  private async recognize(image: string | File | Blob| Buffer) {
     try {
-      const result = await Tesseract.recognize(image, "eng+tha", {
-        logger: (m) => console.log(m),
-      });
-      return result.data.text;
+      const result = await recognize(image);
+      return {
+        text: result.data.text,
+        confidence: result.data.confidence,
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(error.message);
@@ -36,12 +37,12 @@ class TesseractService {
     }
   }
 
-  public async getFromFile(file: File): Promise<string> {
+  public async getFromFile(file: File) {
     try {
-      const imageBuffer = await file.arrayBuffer();
-      const imageBlob = new Blob([imageBuffer]);
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
-      return this.recognize(imageBlob);
+      return this.recognize( buffer);
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(error.message);

@@ -1,5 +1,5 @@
 import { TextResponse } from "@/type/text";
-import { createApi } from "@reduxjs/toolkit/query";
+import { createApi } from "@reduxjs/toolkit/query/react";
 import axiosBaseQuery from "../axios";
 
 export const ocrApi = createApi({
@@ -8,11 +8,20 @@ export const ocrApi = createApi({
   tagTypes: ["Text"],
   endpoints: (builder) => ({
     getTextFromImage: builder.mutation<TextResponse, { file: File }>({
-      query: (body) => ({
-        url: "/image-to-text",
-        method: "POST",
-        data: body,
-      }),
+      query: ({ file }) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        return {
+          url: "/ocr-image",
+          method: "POST",
+          data: formData,
+       
+        };
+      },
     }),
   }),
 });
+
+
+export const { useGetTextFromImageMutation } = ocrApi;

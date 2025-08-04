@@ -1,5 +1,3 @@
-import { FileValidFormType } from "@/form/file-valid-form";
-import { UseFormReturn } from "react-hook-form";
 
 interface OCRResult {
   text: string;
@@ -21,6 +19,7 @@ interface OCRMethod {
 }
 
 type OCRState = {
+  selectedFile: File | null;
   imagePreview: string | null;
   isProcessing: boolean;
   progress: number;
@@ -29,6 +28,7 @@ type OCRState = {
 };
 
 type OCRAction = {
+  setSelectedFile: (selectedFile: File | null) => void;
   setImagePreview: (imagePreview: string | null) => void;
   setIsProcessing: (isProcessing: boolean) => void;
   setProgress: (progress: number) => void;
@@ -37,7 +37,6 @@ type OCRAction = {
 };
 
 interface OCRHookExport {
-  file?: File;
   state?: OCRState;
   action?: OCRAction;
   method?: OCRMethod;
